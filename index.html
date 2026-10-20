@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#04060f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>RAMPAGE 2026</title>
+  <meta name="description" content="1986 Bally Midway Rampage remake for the web — original game data and sound board audio, all-new 2026 graphics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Black+Han+Sans&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Rampage 2026 game screen"></canvas>
+  <div id="touch" hidden>
+    <div class="dpad" id="dpad"><div class="knob" id="knob"></div></div>
+    <div class="actions">
+      <button data-btn="punch" class="punch">PUNCH</button>
+      <button data-btn="jump" class="jump">JUMP</button>
+    </div>
+    <div class="topbtns">
+      <button data-btn="start" class="small">START</button>
+      <button id="pausebtn" class="small">II</button>
+      <button id="fsbtn" class="small">⛶</button>
+    </div>
+  </div>
+  <div id="rotate" hidden><div>📱↻<br>가로 화면으로 돌려주세요</div></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

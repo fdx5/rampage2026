@@ -1,0 +1,14 @@
+{
+  "name": "rampage2026",
+  "version": "1.0.0",
+  "description": "RAMPAGE 2026 - web remake of the 1986 Bally Midway arcade game",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo \"No build step: static ES modules\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

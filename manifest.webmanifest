@@ -1,0 +1,9 @@
+{
+  "name": "RAMPAGE 2026",
+  "short_name": "RAMPAGE",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#04060f",
+  "theme_color": "#04060f"
+}

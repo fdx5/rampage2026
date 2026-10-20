@@ -1,0 +1,240 @@
+{
+ "cities": [
+  "PEORIA",
+  "JOLIET",
+  "CHICAGO",
+  "KALAMAZOO",
+  "DETROIT",
+  "CLEVELAND",
+  "PITTSBURGH",
+  "BALTIMORE",
+  "PHILADELPHIA",
+  "NEWARK",
+  "MANHATTAN",
+  "BOSTON",
+  "BANGOR",
+  "QUEBEC",
+  "MONTREAL",
+  "OTTAWA",
+  "TORONTO",
+  "MACKINAW",
+  "GREEN BAY",
+  "MILWAUKEE",
+  "LA CROSSE",
+  "ST. PAUL",
+  "DULUTH",
+  "BISMARCK",
+  "CUSTER",
+  "BILLINGS",
+  "BOISE",
+  "SPOKANE",
+  "SEATTLE",
+  "PORTLAND",
+  "SACRAMENTO",
+  "FRESNO",
+  "BURBANK",
+  "SAN DIEGO",
+  "LAS VEGAS",
+  "PHOENIX",
+  "ALBUQUERQUE",
+  "AMARILLO",
+  "LUBBOCK",
+  "DALLAS",
+  "HOUSTON",
+  "BATON ROUGE",
+  "NEW ORLEANS",
+  "MOBILE",
+  "TAMPA BAY",
+  "MIAMI",
+  "DAYTONA",
+  "SAVANNAH",
+  "CHARLOTTE",
+  "RALEIGH",
+  "RICHMOND",
+  "CHARLESTON",
+  "KNOXVILLE",
+  "CHATTANOOGA",
+  "ATLANTA",
+  "TUSCALOOSA",
+  "MEMPHIS",
+  "NASHVILLE",
+  "LOUISVILLE",
+  "LEXINGTON",
+  "CINCINNATI",
+  "INDIANAPOLIS",
+  "ST. LOUIS",
+  "LITTLE ROCK",
+  "TULSA",
+  "WICHITA",
+  "KANSAS CITY",
+  "DES MOINES",
+  "OMAHA",
+  "LINCOLN",
+  "BOULDER",
+  "DENVER",
+  "CHEYENNE",
+  "SALT LAKE",
+  "RENO",
+  "SAN JOSE",
+  "LOS ANGELES",
+  "HONOLULU",
+  "MAUI",
+  "ANCHORAGE",
+  "NOME",
+  "FAIRBANKS",
+  "HOMEWOOD",
+  "AURORA",
+  "PLANO ILL."
+ ],
+ "headlines": [
+  [
+   "EX-MUTANT IS",
+   "ARRESTED FOR",
+   "STREAKING!"
+  ],
+  [
+   "LAB SCREW-UP",
+   "WEARS OFF...",
+   "FILM AT 11."
+  ],
+  [
+   "SPOUSE OF",
+   "MUTANT FILES",
+   "LEGAL ACTION."
+  ],
+  [
+   "FORMER BEAST",
+   "SAYS IT MAY",
+   "HAPPEN AGAIN."
+  ],
+  [
+   "STILL AT",
+   "LARGE...",
+   "VERY LARGE!"
+  ],
+  [
+   "IS THERE NO",
+   "END TO THIS",
+   "RAMPAGE???"
+  ],
+  [
+   "PROPERTY",
+   "VALUES AT",
+   "ALL TIME LOW."
+  ],
+  [
+   "YOUR AD HERE",
+   "CALL NOW! 1-",
+   "800-ZOO-KEEP"
+  ],
+  [
+   "JOB OPENINGS",
+   "IN NATIONAL",
+   "GUARD!"
+  ],
+  [
+   "REAL LIFE",
+   "JEKYLL AND",
+   "HYDE STORY!!"
+  ],
+  [
+   "HINT...",
+   "FOOD BEHIND",
+   "OPEN WINDOWS."
+  ],
+  [
+   "HINT- DURING",
+   "A JUMP, HOLD",
+   "JOYSTICK UP",
+   "TO GRAB SIDE",
+   "OF BUILDING."
+  ],
+  [
+   "HINT...",
+   "IF YOU WATCH",
+   "WHAT YOU EAT",
+   "YOU CAN LIVE",
+   "LONGER!"
+  ],
+  [
+   "HINT... JUMP",
+   "WHEN YOU SEE",
+   "DUST CLOUDS!"
+  ],
+  [
+   "HINT...",
+   "MEGA-VITAMIN",
+   "BONUS EVERY",
+   "128TH DAY",
+   "IN PLANO ILL."
+  ],
+  [
+   "WARNING ...",
+   "ELECTRICITY",
+   "IS SHOCKING!"
+  ],
+  [
+   "RAMPAGE HAS",
+   "768 DAYS OF",
+   "DESTRUCTION.",
+   "NO TWO ALIKE!"
+  ],
+  [
+   "HINT... WANT",
+   "TO EAT WELL?",
+   "PUNCH SLOWER."
+  ],
+  [
+   "EXPERIMENTAL",
+   "VITAMIN HAS",
+   "ILL EFFECTS."
+  ],
+  [
+   "WOMAN FINDS",
+   "LAKE TO BE",
+   "RADIOACTIVE."
+  ],
+  [
+   "UNUSUAL FOOD",
+   "ADDITIVE MAY",
+   "BE RECALLED."
+  ],
+  [
+   "EVER GROWING",
+   "CONCERN OVER",
+   "MEGA-VITAMIN."
+  ],
+  [
+   "RADIOACTIVE",
+   "LAKE CHANGES",
+   "WOMANS SCALE."
+  ],
+  [
+   "CITY HOWLING",
+   "MAD, SAUSAGE",
+   "SCAM EXPOSED."
+  ]
+ ],
+ "items": {
+  "food": [
+   "MILK",
+   "TURKEY",
+   "HOT TOAST"
+  ],
+  "hazard": [
+   "CACTUS",
+   "POISON",
+   "TOASTER"
+  ],
+  "bonus": [
+   "MONEY BAG",
+   "FLOWER POT",
+   "T.V. OFF"
+  ]
+ },
+ "credits": [
+  "ARTIST: BRIAN COLIN",
+  "SOUNDS: MICHAEL BARTLOW",
+  "SOFTWARE: JEFF NAUMAN"
+ ]
+}
