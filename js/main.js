@@ -9,6 +9,7 @@ import { renderBackdrop } from './art/sceneArt.js';
 import { drawHUD, drawTitle, drawNews, drawGameOver, drawPause, drawSoundTest, MENU_RECTS } from './ui.js';
 import { loadSave, writeSave } from './save.js';
 import { REAL, loadRealAssets } from './art/realAssets.js';
+import { KINDS } from './art/monsterArt.js';
 
 const KIND_ORDER = ['george', 'lizzie', 'ralph'];
 const SPAWN_X = [150, W - 150, W / 2];
@@ -29,11 +30,12 @@ class Game {
     this.day = 1;
     this.hiscore = Number(safeGet('rampage2026.hi') || 0);
     this.players = KIND_ORDER.map((kind) => ({ kind, joined: false, score: 0, monster: null, contT: 0 }));
+    this.setP1Kind(KIND_ORDER.includes(safeGet('rampage2026.p1kind')) ? safeGet('rampage2026.p1kind') : 'george', false);
     this.titleBackdrop = renderBackdrop('night', mulberry32(42));
     this.paused = false;
     this.soundTest = { sel: 0, playing: null, src: null };
     this.save = loadSave();
-    this.menu = { sel: this.save ? 1 : 0, stage: this.save?.day ?? 1 };
+    this.menu = { sel: this.save ? 2 : 1, stage: this.save?.day ?? 1 };
     this.taps = [];
     canvas.addEventListener('pointerdown', (e) => {
       const r = canvas.getBoundingClientRect();
@@ -63,6 +65,21 @@ class Game {
 
   setScene(s) { this.scene = s; this.sceneT = 0; }
 
+  // Player 1 picks any monster; players 2 and 3 get the remaining two in order.
+  setP1Kind(kind, announce = true) {
+    this.players[0].kind = kind;
+    const rest = KIND_ORDER.filter((k) => k !== kind);
+    this.players[1].kind = rest[0];
+    this.players[2].kind = rest[1];
+    safeSet('rampage2026.p1kind', kind);
+    if (announce) audio.play('roar', { gap: 0.15 });
+  }
+
+  cycleP1Kind(d) {
+    const i = KIND_ORDER.indexOf(this.players[0].kind);
+    this.setP1Kind(KIND_ORDER[(i + d + KIND_ORDER.length) % KIND_ORDER.length]);
+  }
+
   joinPlayer(i) {
     const p = this.players[i];
     audio.play('coin');
@@ -91,6 +108,7 @@ class Game {
       sv.players.forEach((sp, i) => {
         if (sp.joined) this.players[i].joined = true;
         this.players[i].score = sp.score;
+        if (KIND_ORDER.includes(sp.kind)) this.players[i].kind = sp.kind;   // keep the monsters you played with
       });
     }
     audio.play('join');
@@ -166,7 +184,7 @@ class Game {
     audio.stopAll();
     for (const p of this.players) { p.joined = false; p.monster = null; }
     this.save = loadSave();
-    this.menu = { sel: this.save ? 1 : 0, stage: this.save?.day ?? 1 };
+    this.menu = { sel: this.save ? 2 : 1, stage: this.save?.day ?? 1 };
     this.paused = false;
     this.setScene('title');
   }
@@ -174,6 +192,7 @@ class Game {
   menuItems() {
     const sv = this.save;
     return [
+      { id: 'char', label: `캐릭터 (1P)  ◀ ${KINDS[this.players[0].kind].name} ▶`, enabled: true },
       { id: 'new', label: '새 게임  NEW GAME', enabled: true },
       { id: 'continue', label: sv ? `이어하기  DAY ${sv.day} · ${CITIES[(sv.day - 1) % CITIES.length]}` : '이어하기  (저장 없음)', enabled: !!sv },
       { id: 'stage', label: sv ? `스테이지 선택  ◀ DAY ${this.menu.stage} ▶` : '스테이지 선택  (저장 없음)', enabled: !!sv },
@@ -182,6 +201,7 @@ class Game {
   }
 
   activateMenu(id) {
+    if (id === 'char') { this.cycleP1Kind(1); return; }
     if (id === 'new') this.startGame('new', 1);
     else if (id === 'continue') this.startGame('continue');
     else if (id === 'stage') this.startGame('stage', this.menu.stage);
@@ -207,11 +227,27 @@ class Game {
       if (p1.leftPressed) mn.stage = mn.stage > 1 ? mn.stage - 1 : maxDay;
       if (p1.rightPressed) mn.stage = mn.stage < maxDay ? mn.stage + 1 : 1;
     }
+    if (items[mn.sel].id === 'char') {
+      if (p1.leftPressed) this.cycleP1Kind(-1);
+      if (p1.rightPressed) this.cycleP1Kind(1);
+      // on the character row, confirming starts a new game with that monster
+      if (p1.startPressed || p1.punchPressed || p1.jumpPressed) { this.activateMenu('new'); return; }
+    }
     if (p1.startPressed || p1.punchPressed || p1.jumpPressed) { this.activateMenu(items[mn.sel].id); return; }
     if (inp.pressed('KeyT')) { this.setScene('soundtest'); return; }
     for (const t of this.taps) {
+      // tapping a monster portrait picks it for player 1
+      if (t.y > 400 && t.y < 700) {
+        const kind = KIND_ORDER[[190, W / 2, W - 190].findIndex((x) => Math.abs(t.x - x) < 170)];
+        if (kind) { this.setP1Kind(kind); mn.sel = 0; continue; }
+      }
       const hit = MENU_RECTS.find((r) => t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h);
       if (!hit || !items[hit.i].enabled) continue;
+      if (items[hit.i].id === 'char') {
+        mn.sel = hit.i;
+        this.cycleP1Kind(t.x < hit.x + hit.w * 0.3 ? -1 : 1);
+        continue;
+      }
       if (items[hit.i].id === 'stage') {
         if (t.x < hit.x + hit.w * 0.3) { mn.stage = mn.stage > 1 ? mn.stage - 1 : maxDay; mn.sel = hit.i; continue; }
         if (t.x > hit.x + hit.w * 0.7) { mn.stage = mn.stage < maxDay ? mn.stage + 1 : 1; mn.sel = hit.i; continue; }

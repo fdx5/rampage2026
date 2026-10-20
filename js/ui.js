@@ -63,19 +63,31 @@ export function drawTitle(ctx, game, time, backdrop) {
   ctx.fillStyle = 'rgba(4,6,20,0.45)'; ctx.fillRect(0, 0, W, H);
   const kinds = ['george', 'lizzie', 'ralph'];
   kinds.forEach((k, i) => {
-    const roar = Math.floor(time / 1.2) % 3 === i;
     const x = [190, W / 2, W - 190][i];
-    const m = fakeMonster(k, x, 620, i === 2 ? -1 : 1, roar, 1.55);
-    const joined = i === 0 || game.players[i].joined;
+    const owner = game.players.findIndex((p) => p.kind === k);   // which player controls this monster
+    const mine = owner === 0, joined = mine || game.players[owner].joined;
+    const roar = mine ? Math.floor(time / 1.6) % 2 === 0 : Math.floor(time / 1.2) % 3 === i;
+    const sc = (i === 1 ? 1.28 : 1.5) * (mine ? 1.1 : 1);
+    const m = fakeMonster(k, x, 620, i === 2 ? -1 : 1, roar, sc);
     if (joined) {
-      const gl = ctx.createRadialGradient(x, 520, 10, x, 520, 200);
-      gl.addColorStop(0, KINDS[k].ui + '77'); gl.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gl; ctx.fillRect(x - 200, 320, 400, 400);
+      const gl = ctx.createRadialGradient(x, 520, 10, x, 520, mine ? 230 : 190);
+      gl.addColorStop(0, KINDS[k].ui + (mine ? 'aa' : '66')); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gl; ctx.fillRect(x - 230, 300, 460, 420);
     }
+    ctx.save();
+    if (!joined) ctx.filter = 'saturate(0.35) brightness(0.65)';
     drawMonster(ctx, m, time + i);
-    text(ctx, KINDS[k].name, x, 650, { size: 24, color: KINDS[k].ui, align: 'center', stroke: 6 });
-    const sub = i === 0 ? 'P1 · ' + (game.touch ? '터치 패드' : KEY_HELP[0]) : joined ? 'READY!  (' + (i + 1) + ' 키로 취소)' : KEY_HELP[i];
-    text(ctx, sub, x, 678, { size: 13, color: joined && i ? '#fff' : '#cfd6e6', align: 'center', font: KFONT, weight: 400, stroke: 4 });
+    ctx.restore();
+    if (joined) {
+      const tag = `${owner + 1}P`;
+      const by = i === 1 ? 600 : 620 - sc * 165 - 30;
+      roundRect(ctx, x - 26, by, 52, 26, 13); ctx.fillStyle = mine ? '#ffb02e' : KINDS[k].ui; ctx.fill();
+      text(ctx, tag, x, by + 20, { size: 16, color: '#1a0a00', align: 'center' });
+    }
+    text(ctx, KINDS[k].name, x, 650, { size: mine ? 28 : 22, color: KINDS[k].ui, align: 'center', stroke: 6 });
+    const sub = mine ? (game.touch ? '1P · 탭해서 캐릭터 변경' : '1P · ←→로 캐릭터 변경')
+      : joined ? `READY!  (${owner + 1} 키로 취소)` : (game.touch ? '탭해서 1P로 선택' : KEY_HELP[owner]);
+    text(ctx, sub, x, 678, { size: 13, color: mine ? '#ffe3a0' : joined ? '#fff' : '#cfd6e6', align: 'center', font: KFONT, weight: 400, stroke: 4 });
   });
   // logo
   ctx.save();
@@ -97,20 +109,20 @@ export function drawTitle(ctx, game, time, backdrop) {
   // menu
   const items = game.menuItems();
   MENU_RECTS.length = 0;
-  const mw = 460, mh = 40, mx = W / 2 - mw / 2, my0 = 186;
+  const mw = 460, mh = 32, mx = W / 2 - mw / 2, my0 = 168;
   items.forEach((it, i) => {
-    const y = my0 + i * (mh + 8), sel = game.menu.sel === i;
+    const y = my0 + i * (mh + 6), sel = game.menu.sel === i;
     MENU_RECTS.push({ x: mx, y, w: mw, h: mh, i });
     roundRect(ctx, mx, y, mw, mh, 12);
     ctx.fillStyle = sel ? 'rgba(255,176,46,0.92)' : 'rgba(10,14,30,0.7)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = sel ? '#ffe3a0' : 'rgba(255,255,255,0.18)'; ctx.stroke();
-    text(ctx, it.label, W / 2, y + 27, { size: 19, color: !it.enabled ? 'rgba(255,255,255,0.3)' : sel ? '#1a0a00' : '#fff', align: 'center', font: KFONT, weight: 400 });
-    if (sel && Math.floor(time * 3) % 2) text(ctx, '▶', mx + 18, y + 27, { size: 16, color: '#1a0a00' });
+    text(ctx, it.label, W / 2, y + 23, { size: 19, color: !it.enabled ? 'rgba(255,255,255,0.3)' : sel ? '#1a0a00' : '#fff', align: 'center', font: KFONT, weight: 400 });
+    if (sel && Math.floor(time * 3) % 2) text(ctx, '▶', mx + 18, y + 23, { size: 16, color: '#1a0a00' });
   });
   const sv = game.save;
   const info = sv ? `최고 기록 DAY ${sv.maxDay} · HI-SCORE ${game.hiscore}` : `HI-SCORE ${game.hiscore}`;
-  text(ctx, info, W / 2, my0 + 4 * (mh + 8) + 18, { size: 14, color: '#ffe14d', align: 'center', font: KFONT, weight: 400, stroke: 3 });
-  text(ctx, game.touch ? '메뉴를 터치하세요 · 2P/3P는 키보드/게임패드' : '↑↓ 선택 · ←→ 스테이지 · ENTER/Z 결정 · 2/3 키: 2P/3P 참가 · M 음소거', W / 2, my0 + 4 * (mh + 8) + 40, { size: 13, color: '#9aa6c4', align: 'center', font: KFONT, weight: 400, stroke: 3 });
+  text(ctx, info, W - 16, 28, { size: 14, color: '#ffe14d', align: 'right', font: KFONT, weight: 400, stroke: 3 });
+  text(ctx, game.touch ? '메뉴를 터치하세요 · 2P/3P는 키보드/게임패드' : '↑↓ 선택 · ←→ 캐릭터/스테이지 변경 · ENTER/Z 결정 · 2/3 키: 2P/3P 참가 · M 음소거', W / 2, H - 22, { size: 12, color: '#9aa6c4', align: 'center', font: KFONT, weight: 400, stroke: 3 });
   text(ctx, 'ORIGINAL © 1986 BALLY MIDWAY · ' + ROM_CREDITS.join(' · '), W / 2, H - 6, { size: 10, color: 'rgba(255,255,255,0.45)', align: 'center', weight: 400 });
 }
 
