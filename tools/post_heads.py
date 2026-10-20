@@ -9,8 +9,8 @@ OUT_PX = 400
 # per image (1024px source coords): head centre, fade radii, eyes, mouth
 SPEC = {
     'george': {'size': 112, 'warm': True,
-               'snarl': dict(c=(560, 430), r=(360, 470), eyes=[(544, 346), (704, 356)], mouth=(620, 660)),
-               'roar': dict(c=(580, 440), r=(360, 470), eyes=[(544, 332), (720, 334)], mouth=(620, 630))},
+               'snarl': dict(c=(560, 430), r=(360, 470), ell=(530, 440, 300, 262, 440, 420, 0.1), eyes=[(544, 346), (704, 356)], mouth=(620, 660)),
+               'roar': dict(c=(580, 440), r=(360, 470), ell=(500, 450, 320, 322, 445, 430, 0.1), eyes=[(544, 332), (720, 334)], mouth=(620, 630))},
     'lizzie': {'size': 122, 'warm': False,
                'snarl': dict(c=(620, 420), r=(420, 520), eyes=[(526, 226)], mouth=(720, 560)),
                'roar': dict(c=(640, 420), r=(420, 520), eyes=[(556, 196)], mouth=(700, 520))},
@@ -26,8 +26,16 @@ for kind, ks in SPEC.items():
         im = np.asarray(Image.open(f'{SRC}{kind}_{expr}.png').convert('RGBA')).astype(np.float32)
         cx, cy = sp['c']; r0, r1 = sp['r']
         yy, xx = np.mgrid[0:im.shape[0], 0:im.shape[1]]
-        d = np.hypot(xx - cx, (yy - cy) * 0.92)
-        fade = np.clip((r1 - d) / (r1 - r0), 0, 1)
+        if 'ell' in sp:
+            # asymmetric ellipse hugging the head outline: (cx, cy, left, right, top, bottom, feather)
+            ex, ey, rl, rr, rt, rb, fe = sp['ell']
+            nx = (xx - ex) / np.where(xx < ex, rl, rr)
+            ny = (yy - ey) / np.where(yy < ey, rt, rb)
+            d = np.hypot(nx, ny)
+            fade = np.clip((1 - d) / fe, 0, 1)
+        else:
+            d = np.hypot(xx - cx, (yy - cy) * 0.92)
+            fade = np.clip((r1 - d) / (r1 - r0), 0, 1)
         im[..., 3] *= fade
         if ks['warm']:   # original George is brown, the photo gorilla is near-black
             im[..., 0] = np.clip(im[..., 0] * 1.25 + 18, 0, 255)

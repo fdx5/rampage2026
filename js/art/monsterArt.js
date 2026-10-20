@@ -11,7 +11,7 @@ import { REAL, texPattern } from './realAssets.js';
 
 export const KINDS = {
   george: {
-    name: 'GEORGE', ui: '#f2a23a', tex: 'fur', fur: 1.7, texBody: 'fur_brown', texSkin: 'skin_gorilla', tint: '#f0c8a8',
+    name: 'GEORGE', ui: '#f2a23a', tex: 'fur', fur: 1.7, texBody: 'fur_brown', texSkin: 'skin_gorilla', tint: '#ffe2c4',
     base: '#5c3018', light: '#a4612e', dark: '#240f05', line: '#120602',
     skin: '#c98a52', skinLight: '#f0bd86', skinDark: '#7d4f2b',
     eye: '#ff2a12', mouth: '#3a0505', gum: '#c23038',
@@ -53,7 +53,8 @@ const P = (x, y) => ({ x, y });
 const mix = (a, b, t) => P(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
 const hash = (i, s = 0) => { const v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v); };
 const LIGHT = { x: -0.6, y: -0.8 };
-const HEAD_SCALE = 1.3;   // direction towards the light, world space
+const HEAD_SCALE = 1.04;           // vector heads
+const PHOTO_K = 0.8;               // photo heads (relative to their metadata size)
 
 // ---------------------------------------------------------------------------
 // Pose
@@ -533,7 +534,7 @@ const PHOTO_OFS = { x: 6, y: 2 };
 function drawPhotoHead(ctx, h, mouth, t) {
   const roar = mouth > 0.62;
   const v = roar ? h.roar : h.snarl, img = roar ? h.roarImg : h.snarlImg;
-  const S = h.size;
+  const S = h.size * PHOTO_K;
   ctx.translate(PHOTO_OFS.x, PHOTO_OFS.y);
   ctx.drawImage(img, -S / 2, -S / 2, S, S);
   ctx.globalCompositeOperation = 'lighter';
@@ -551,7 +552,8 @@ function drawPhotoHead(ctx, h, mouth, t) {
 function mouthOffset(kind) {
   const h = isReal() && REAL.heads[kind];
   if (!h) return { x: 22, y: 12 };
-  return { x: PHOTO_OFS.x + (h.roar.mouth[0] - 0.5) * h.size, y: PHOTO_OFS.y - 6 + (h.roar.mouth[1] - 0.5) * h.size };
+  const S = h.size * PHOTO_K;
+  return { x: PHOTO_OFS.x + (h.roar.mouth[0] - 0.5) * S, y: PHOTO_OFS.y - 2 + (h.roar.mouth[1] - 0.5) * S };
 }
 
 // ---------------------------------------------------------------------------
@@ -756,8 +758,17 @@ export function drawMonster(ctx, m, time) {
   part(ctx, p.hipF, p.kneeF, k.thigh, k, L, { seed: 7 });
   part(ctx, p.kneeF, p.footF, k.shin, k, L, { seed: 8 });
   foot(ctx, p.kneeF, p.footF, k, k);
-  // thick neck joining the photo head to the shoulders
-  if (isReal()) part(ctx, P(p.chest.x - 2, p.chest.y + 6), P(p.head.x - 2, p.head.y + 10), [[0, 17, 17], [1, 15, 15]], k, L, { seed: 12 });
+  // neck / mane: a tapering mass of the body material running from the shoulders up
+  // under the photo head, with a contact shadow below the jaw so the head sits on it
+  if (isReal() && REAL.heads[m.kind]) {
+    const nk = m.kind === 'george' ? [[0, 26, 26], [0.55, 24, 23], [1, 18, 17]] : m.kind === 'ralph' ? [[0, 23, 23], [0.6, 22, 22], [1, 16, 16]] : [[0, 20, 20], [1, 15, 15]];
+    part(ctx, P(p.chest.x - 4, p.chest.y + 10), P(p.head.x, p.head.y + 2), nk, k, L, { seed: 12, furBack: k.fur * 1.6, furFront: k.fur });
+    const S = REAL.heads[m.kind].size * PHOTO_K;
+    const sx = p.head.x + 4, sy = p.head.y + S * 0.26;
+    const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, S * 0.38);
+    sg.addColorStop(0, 'rgba(0,0,0,0.32)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(sx, sy, S * 0.38, S * 0.22, 0, 0, 7); ctx.fill();
+  }
   // shoulder mass + front arm
   ctx.save();
   jaggedBlob(ctx, p.shF.x, p.shF.y, k.upper[1][1] + 1, k.upper[1][1], 22, k.fur, 9);
@@ -773,7 +784,7 @@ export function drawMonster(ctx, m, time) {
   part(ctx, p.elbF, p.handF, k.fore, k, L, { seed: 10 });
   // head (big, like the original sprites)
   ctx.save();
-  ctx.translate(p.head.x, p.head.y - 6); ctx.rotate(p.headRot); ctx.scale(HEAD_SCALE, HEAD_SCALE);
+  ctx.translate(p.head.x, p.head.y - 2); ctx.rotate(p.headRot); ctx.scale(HEAD_SCALE, HEAD_SCALE);
   const photo = isReal() && REAL.heads[m.kind];
   if (photo) { ctx.scale(1 / HEAD_SCALE, 1 / HEAD_SCALE); drawPhotoHead(ctx, photo, p.mouth, time); }
   else if (m.kind === 'george') headGeorge(ctx, k, p.mouth, time);
