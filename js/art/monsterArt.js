@@ -143,7 +143,7 @@ export function computePose(m, time) {
     let hand, elb;
     if (m.punchDir === 'up') { hand = P(24, -168); elb = P(22, -130); }
     else if (m.punchDir === 'down') { hand = P(46, -6); elb = P(40, -46); }
-    else { hand = P(70, -90); elb = P(46, -92); }
+    else { hand = P(72, -74); elb = P(46, -80); }
     p.handF = mix(p.handF, hand, ext); p.elbF = mix(p.elbF, elb, ext);
     p.mouth = Math.max(p.mouth, ext > 0.3 ? 0.9 : 0.5);
     if (m.punchDir !== 'down') { p.chest.x += ext * 5; p.head.x += ext * 6; }
@@ -564,19 +564,41 @@ function hand(ctx, elb, h, k, mat, L, grip) {
   const r = k.hand * (grip ? 1.15 : 1);
   ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(ang);
   const skin = k === KINDS.lizzie ? mat : { base: k.skin, light: k.skinLight, dark: k.skinDark, line: k.line };
-  if (k.claws) {
+  if (k.claws && !isReal()) {
     for (let i = -1; i <= 1; i++) {
       ctx.fillStyle = '#f6f0dc'; ctx.strokeStyle = k.line; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(r * 0.7, i * 4.5 - 2); ctx.quadraticCurveTo(r + 7, i * 5, r + 5, i * 5 + 5); ctx.lineTo(r * 0.7, i * 4.5 + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
   if (isReal()) {
-    ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * 0.95, 0, 0, 7);
-    matFill(ctx, skin.base, k.texSkin, 0.16);
-    shadeOver(ctx, -r, -r, r, r, k.tint || '#ffffff', mat.back, [-r * 2, -r * 2, r * 4, r * 4]);
-    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
-    ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1.4;
-    for (let i = 0; i < 3; i++) { const y = -r * 0.45 + i * r * 0.45; ctx.beginPath(); ctx.moveTo(r * 0.25, y); ctx.quadraticCurveTo(r * 0.75, y + 1.5, r * 0.98, y); ctx.stroke(); }
+    // back of the hand
+    const tint = k.tint || '#ffffff';
+    const shadeAll = (x0, y0, x1, y1) => shadeOver(ctx, x0, y0, x1, y1, tint, mat.back, [-r * 3, -r * 3, r * 6, r * 6]);
+    ctx.beginPath(); ctx.ellipse(-r * 0.15, 0, r * 0.95, r * 0.85, 0, 0, 7);
+    matFill(ctx, skin.base, k.texSkin, 0.16); shadeAll(-r, -r, r, r);
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.stroke();
+    // four curled fingers (knuckle row facing forward)
+    const fh = r * 0.46;
+    for (let i = 0; i < 4; i++) {
+      const y = -r * 0.72 + i * fh * 0.98;
+      ctx.beginPath(); ctx.roundRect(r * 0.32, y, r * 0.78, fh, fh * 0.48);
+      matFill(ctx, skin.base, k.texSkin, 0.14); shadeAll(r * 0.3, y, r * 1.1, y + fh);
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,235,210,0.18)'; ctx.fillRect(r * 0.62, y + fh * 0.18, r * 0.3, fh * 0.2);
+    }
+    // thumb wrapped over the fingers
+    ctx.save(); ctx.translate(r * 0.42, r * 0.52); ctx.rotate(-0.35);
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.5, r * 0.24, 0, 0, 7);
+    matFill(ctx, skin.base, k.texSkin, 0.14); shadeAll(-r * 0.5, -r * 0.3, r * 0.5, r * 0.3);
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+    ctx.restore();
+    if (k.claws) {
+      for (let i = 0; i < 4; i++) {
+        const y = -r * 0.72 + i * fh * 0.98 + fh * 0.5;
+        ctx.fillStyle = '#e9e0c6'; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(r * 1.05, y - 1.6); ctx.quadraticCurveTo(r * 1.45, y, r * 1.3, y + 3.2); ctx.lineTo(r * 1.05, y + 1.4); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+    }
     ctx.restore();
     return;
   }
@@ -769,19 +791,23 @@ export function drawMonster(ctx, m, time) {
     sg.addColorStop(0, 'rgba(0,0,0,0.32)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(sx, sy, S * 0.38, S * 0.22, 0, 0, 7); ctx.fill();
   }
-  // shoulder mass + front arm
-  ctx.save();
-  jaggedBlob(ctx, p.shF.x, p.shF.y, k.upper[1][1] + 1, k.upper[1][1], 22, k.fur, 9);
-  if (isReal()) {
-    matFill(ctx, k.base, k.texBody, 0.3);
-    shadeOver(ctx, p.shF.x - 14, p.shF.y - 14, p.shF.x + 14, p.shF.y + 14, k.tint, false, [p.shF.x - 40, p.shF.y - 40, 80, 80]);
-  } else {
-    ctx.lineWidth = 4; ctx.strokeStyle = k.line; ctx.stroke();
-    ctx.fillStyle = radial(ctx, p.shF.x - 5, p.shF.y - 6, 24, k.light, k.base, k.dark); ctx.fill();
-  }
-  ctx.restore();
-  part(ctx, p.shF, p.elbF, k.upper, k, L, { seed: 9 });
-  part(ctx, p.elbF, p.handF, k.fore, k, L, { seed: 10 });
+  const armInFront = !!p.held || (m.punchT > 0 && m.punchDir !== 'up');
+  const drawArm = () => {
+    // shoulder mass + front arm
+    ctx.save();
+    jaggedBlob(ctx, p.shF.x, p.shF.y, k.upper[1][1] + 1, k.upper[1][1], 22, k.fur, 9);
+    if (isReal()) {
+      matFill(ctx, k.base, k.texBody, 0.3);
+      shadeOver(ctx, p.shF.x - 14, p.shF.y - 14, p.shF.x + 14, p.shF.y + 14, k.tint, false, [p.shF.x - 40, p.shF.y - 40, 80, 80]);
+    } else {
+      ctx.lineWidth = 4; ctx.strokeStyle = k.line; ctx.stroke();
+      ctx.fillStyle = radial(ctx, p.shF.x - 5, p.shF.y - 6, 24, k.light, k.base, k.dark); ctx.fill();
+    }
+    ctx.restore();
+    part(ctx, p.shF, p.elbF, k.upper, k, L, { seed: 9 });
+    part(ctx, p.elbF, p.handF, k.fore, k, L, { seed: 10 });
+  };
+  if (!armInFront) { drawArm(); hand(ctx, p.elbF, p.handF, k, k, L, m.punchT > 0); }
   // head (big, like the original sprites)
   ctx.save();
   ctx.translate(p.head.x, p.head.y - 2); ctx.rotate(p.headRot); ctx.scale(HEAD_SCALE, HEAD_SCALE);
@@ -791,6 +817,7 @@ export function drawMonster(ctx, m, time) {
   else if (m.kind === 'lizzie') headLizzie(ctx, k, p.mouth, time);
   else headRalph(ctx, k, p.mouth, time);
   ctx.restore();
+  if (armInFront) drawArm();
   if (p.held) {
     const w = p.held.what;
     if (w.type === 'item') {
@@ -798,7 +825,7 @@ export function drawMonster(ctx, m, time) {
     } else drawPrey(ctx, w.type, p.held.x, p.held.y - 4, p.held.s * 1.25, time);
   }
   // fist in front of the face only when punching up / eating; otherwise it stays with the arm
-  hand(ctx, p.elbF, p.handF, k, k, L, m.punchT > 0 || !!p.held);
+  if (armInFront) hand(ctx, p.elbF, p.handF, k, k, L, true);
   ctx.filter = 'none';
   ctx.restore();
 }
