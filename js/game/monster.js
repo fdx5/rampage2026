@@ -67,18 +67,26 @@ export class Monster {
 
   // Grab -> lift to mouth -> chomp, chomp -> gulp. `what` is the prey/item held in the fist.
   eat(world, heal, what) {
-    if (this.state === 'air' || !what) {
+    // Already chewing (e.g. landed on two soldiers at once) or airborne: just heal.
+    // Re-entering 'eat' here would make 'eat' its own return state and leave the
+    // monster stuck in it with nothing in hand.
+    if (this.state === 'eat' || this.state === 'air' || !what) {
       this.heal(heal); audio.play('eat');
       world.fx.popup(this.x, this.y - 130, `+${heal} HP`, '#7dff8a');
       return;
     }
-    this.afterEat = this.state;
+    this.afterEat = ['ground', 'climb'].includes(this.state) ? this.state : 'ground';
     this.state = 'eat'; this.eatDur = 0.95; this.eatT = this.eatDur;
     this.eatWhat = what; this.eatHeal = heal; this.eatStage = 0;
     if (what.type !== 'item') audio.play('scream', { vol: 0.7, gap: 0.3 });
   }
 
   updateEat(dt, world) {
+    if (!this.eatWhat || this.afterEat === 'eat') {   // inconsistent state: recover instead of crashing
+      this.state = this.platform ? 'ground' : this.bld ? 'climb' : this.y < 628 ? 'air' : 'ground';
+      this.eatWhat = null;
+      return;
+    }
     this.eatT -= dt;
     if (this.afterEat === 'climb' && !this.bld?.alive) { this.eatStage = 3; this.heal(this.eatHeal); this.fall(); return; }
     const e = 1 - this.eatT / this.eatDur;

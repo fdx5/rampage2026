@@ -140,13 +140,20 @@ class Game {
   }
 
   frame(now) {
+    // Schedule the next frame first so a single bad frame can never freeze the game.
+    requestAnimationFrame((t) => this.frame(t));
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
-    this.input.update();
-    this.update(dt);
-    this.draw();
-    this.input.endFrame();
-    requestAnimationFrame((t) => this.frame(t));
+    try {
+      this.input.update();
+      this.update(dt);
+      this.draw();
+    } catch (err) {
+      this.errors = (this.errors || 0) + 1;
+      if (this.errors <= 5) console.error('[RAMPAGE] frame error (recovered):', err);
+    } finally {
+      this.input.endFrame();
+    }
   }
 
   anyAction() {
@@ -319,6 +326,7 @@ class Game {
   draw() {
     const ctx = this.ctx;
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
     ctx.imageSmoothingQuality = 'high';
     switch (this.scene) {
       case 'title': drawTitle(ctx, this, this.time, this.titleBackdrop); break;
