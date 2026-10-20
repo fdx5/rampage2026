@@ -8,6 +8,7 @@ import { Monster } from './game/monster.js';
 import { renderBackdrop } from './art/sceneArt.js';
 import { drawHUD, drawTitle, drawNews, drawGameOver, drawPause, drawSoundTest, MENU_RECTS } from './ui.js';
 import { loadSave, writeSave } from './save.js';
+import { REAL, loadRealAssets } from './art/realAssets.js';
 
 const KIND_ORDER = ['george', 'lizzie', 'ralph'];
 const SPAWN_X = [150, W - 150, W / 2];
@@ -138,6 +139,7 @@ class Game {
     this.time += dt; this.sceneT += dt;
     const inp = this.input;
     if (inp.pressed('KeyM')) audio.toggleMute();
+    if (inp.pressed('KeyV')) REAL.enabled = !REAL.enabled;   // photoreal / classic toon art
     switch (this.scene) {
       case 'title':
         this.updateTitle();
@@ -357,6 +359,7 @@ function setupTouch(game) {
   addEventListener('resize', checkRot); checkRot();
 }
 
+loadRealAssets().catch(() => {});
 document.fonts?.ready.then(() => {
   const game = new Game(document.getElementById('game'));
   setupTouch(game);

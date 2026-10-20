@@ -7,10 +7,11 @@
 // and given a jagged fur edge. Heads are drawn separately in a head-local frame.
 import { lerp, shade, rgba } from '../util.js';
 import { ITEM_INFO, drawItem } from './propArt.js';
+import { REAL, texPattern } from './realAssets.js';
 
 export const KINDS = {
   george: {
-    name: 'GEORGE', ui: '#f2a23a', tex: 'fur', fur: 1.7,
+    name: 'GEORGE', ui: '#f2a23a', tex: 'fur', fur: 1.7, texBody: 'fur_brown', texSkin: 'skin_gorilla', tint: '#f0c8a8',
     base: '#5c3018', light: '#a4612e', dark: '#240f05', line: '#120602',
     skin: '#c98a52', skinLight: '#f0bd86', skinDark: '#7d4f2b',
     eye: '#ff2a12', mouth: '#3a0505', gum: '#c23038',
@@ -22,7 +23,7 @@ export const KINDS = {
     hand: 11.5,
   },
   lizzie: {
-    name: 'LIZZIE', ui: '#59d94a', tex: 'scale', fur: 0,
+    name: 'LIZZIE', ui: '#59d94a', tex: 'scale', fur: 0, texBody: 'scales_green', texSkin: 'scales_green', texBelly: 'belly_reptile', tint: '#a4b088',
     base: '#367a26', light: '#80c94f', dark: '#10330b', line: '#061503',
     skin: '#367a26', skinLight: '#80c94f', skinDark: '#1b4a12',
     belly: '#dcc85a', bellyDark: '#8f7f22', spikes: '#f2840f', spikeTip: '#ffe36a',
@@ -35,7 +36,7 @@ export const KINDS = {
     hand: 9.5, claws: true,
   },
   ralph: {
-    name: 'RALPH', ui: '#c9d2e0', tex: 'fur', fur: 2.1,
+    name: 'RALPH', ui: '#c9d2e0', tex: 'fur', fur: 2.1, texBody: 'fur_grey', texSkin: 'skin_wolf', tint: '#b8b8bc',
     base: '#7a7f89', light: '#d2d7de', dark: '#2c3037', line: '#0f1013',
     skin: '#c08e62', skinLight: '#ecc192', skinDark: '#7d5534',
     eye: '#ff1e1e', mouth: '#3c0606', gum: '#bd2e36',
@@ -107,7 +108,8 @@ export function computePose(m, time) {
   } else if (st === 'eat') {
     // grab -> bring to mouth -> chomp chomp -> gulp
     const e = 1 - m.eatT / m.eatDur;
-    const mouth = P(p.head.x + 22, p.head.y + 12);
+    const mo = mouthOffset(m.kind);
+    const mouth = P(p.head.x + mo.x, p.head.y + mo.y);
     const reach = P(62, -88), reachE = P(42, -88);
     const atMouthE = P(p.head.x + 20, p.head.y + 40);
     if (e < 0.28) {
@@ -151,6 +153,42 @@ export function computePose(m, time) {
     p[key].y += upper;
   }
   return p;
+}
+
+
+const isReal = () => REAL.ready && REAL.enabled;
+
+// Lays a photoreal material over the current path (already filled with the shaded
+// base colour): overlay keeps hue and lighting, multiply adds depth to the strands.
+function texOver(ctx, name, scale = 0.3, alpha = 1) {
+  if (!isReal() || !name) return;
+  const pat = texPattern(name, scale);
+  if (!pat) return;
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = pat;
+  ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = alpha;
+  ctx.fillRect(-400, -400, 800, 800);
+  ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = alpha * 0.4;
+  ctx.fillRect(-400, -400, 800, 800);
+  ctx.restore();
+}
+
+// Fills the current path with the photo material (real mode) or the given style.
+function matFill(ctx, fallback, texName, scale = 0.3) {
+  const pat = isReal() && texName ? texPattern(texName, scale) : null;
+  ctx.fillStyle = pat || fallback; ctx.fill();
+}
+
+// Grey-scale form shading multiplied over the material, tinted per monster.
+function shadeOver(ctx, x0, y0, x1, y1, tint, back, rect) {
+  ctx.save(); ctx.clip();
+  ctx.globalCompositeOperation = 'multiply';
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, tint); g.addColorStop(0.5, shade(tint, -0.3)); g.addColorStop(1, shade(tint, -0.82));
+  ctx.fillStyle = g; ctx.fillRect(rect[0], rect[1], rect[2], rect[3]);
+  if (back) { ctx.fillStyle = '#5e5e66'; ctx.fillRect(rect[0], rect[1], rect[2], rect[3]); }
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
@@ -206,12 +244,26 @@ function part(ctx, a, b, prof, mat, L, opt = {}) {
   const lx = L.x * ca - L.y * sa, ly = L.x * sa + L.y * ca;   // light dir in local space
   const w = Math.max(profileAt(prof, 0.5, 1), profileAt(prof, 0.5, 2)) + 4;
   pathPts(ctx, pts);
-  ctx.fillStyle = mat.line; ctx.lineWidth = 4.5; ctx.lineJoin = 'round'; ctx.strokeStyle = mat.line; ctx.stroke();
+  const real = isReal();
+  if (real) {
+    ctx.fillStyle = texPattern(opt.tex || mat.texBody, 0.22); ctx.fill();
+    ctx.save(); ctx.clip();
+    if (opt.detail) opt.detail(ctx, len, lx, ly);
+    ctx.restore();
+    pathPts(ctx, pts);
+    shadeOver(ctx, len / 2 + lx * w, ly * w, len / 2 - lx * w, -ly * w, mat.tint || '#ffffff', mat.back, [-40, -w * 3, len + 80, w * 6]);
+    pathPts(ctx, pts);
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  ctx.fillStyle = mat.line; ctx.lineWidth = real ? 2.6 : 4.5; ctx.lineJoin = 'round'; ctx.strokeStyle = real ? 'rgba(0,0,0,0.8)' : mat.line; ctx.stroke();
   const g = ctx.createLinearGradient(len / 2 + lx * w, ly * w, len / 2 - lx * w, -ly * w);
   g.addColorStop(0, mat.light); g.addColorStop(0.42, mat.base); g.addColorStop(1, mat.dark);
   ctx.fillStyle = g; ctx.fill();
+  texOver(ctx, opt.tex || mat.texBody);
   ctx.save(); ctx.clip();
-  texture(ctx, len, w, mat, seed);
+  if (!real) texture(ctx, len, w, mat, seed);
   if (opt.detail) opt.detail(ctx, len, lx, ly);
   // rim light on the lit edge, ambient occlusion on the far edge
   ctx.translate(-lx * 3, -ly * 3);
@@ -476,6 +528,32 @@ function headRalph(ctx, k, mo, t) {
   if (mo > 0.5) drool(ctx, 28, 5, 14 + jaw * 20, t);
 }
 
+// Photoreal head: snarl / roar photos swapped by mouth openness, glowing eyes on top.
+const PHOTO_OFS = { x: 6, y: 2 };
+function drawPhotoHead(ctx, h, mouth, t) {
+  const roar = mouth > 0.62;
+  const v = roar ? h.roar : h.snarl, img = roar ? h.roarImg : h.snarlImg;
+  const S = h.size;
+  ctx.translate(PHOTO_OFS.x, PHOTO_OFS.y);
+  ctx.drawImage(img, -S / 2, -S / 2, S, S);
+  ctx.globalCompositeOperation = 'lighter';
+  const pulse = 0.75 + Math.sin(t * 6) * 0.25;
+  for (const [ex, ey] of v.eyes) {
+    const x = (ex - 0.5) * S, y = (ey - 0.5) * S, r = S * 0.07;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(255,220,160,${0.9 * pulse})`); g.addColorStop(0.25, `rgba(255,40,10,${0.7 * pulse})`); g.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Where the mouth is relative to the head joint (for bringing prey to it).
+function mouthOffset(kind) {
+  const h = isReal() && REAL.heads[kind];
+  if (!h) return { x: 22, y: 12 };
+  return { x: PHOTO_OFS.x + (h.roar.mouth[0] - 0.5) * h.size, y: PHOTO_OFS.y - 6 + (h.roar.mouth[1] - 0.5) * h.size };
+}
+
 // ---------------------------------------------------------------------------
 // Hands, feet, held prey
 
@@ -490,24 +568,45 @@ function hand(ctx, elb, h, k, mat, L, grip) {
       ctx.beginPath(); ctx.moveTo(r * 0.7, i * 4.5 - 2); ctx.quadraticCurveTo(r + 7, i * 5, r + 5, i * 5 + 5); ctx.lineTo(r * 0.7, i * 4.5 + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
+  if (isReal()) {
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * 0.95, 0, 0, 7);
+    matFill(ctx, skin.base, k.texSkin, 0.16);
+    shadeOver(ctx, -r, -r, r, r, k.tint || '#ffffff', mat.back, [-r * 2, -r * 2, r * 4, r * 4]);
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1.4;
+    for (let i = 0; i < 3; i++) { const y = -r * 0.45 + i * r * 0.45; ctx.beginPath(); ctx.moveTo(r * 0.25, y); ctx.quadraticCurveTo(r * 0.75, y + 1.5, r * 0.98, y); ctx.stroke(); }
+    ctx.restore();
+    return;
+  }
   ctx.fillStyle = skin.line; ctx.beginPath(); ctx.ellipse(0, 0, r + 2.5, r * 0.92 + 2.5, 0, 0, 7); ctx.fill();
   ctx.fillStyle = radial(ctx, -r * 0.4, -r * 0.4, r * 1.6, skin.light, skin.base, skin.dark);
   ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.92, 0, 0, 7); ctx.fill();
+  texOver(ctx, k.texSkin, 0.18);
   // knuckles
   for (let i = 0; i < 4; i++) {
     const y = -r * 0.62 + i * r * 0.42;
     ctx.fillStyle = skin.line; ctx.beginPath(); ctx.arc(r * 0.62, y, r * 0.3 + 1.2, 0, 7); ctx.fill();
     ctx.fillStyle = radial(ctx, r * 0.55, y - 1, r * 0.45, skin.light, skin.base, skin.dark);
     ctx.beginPath(); ctx.arc(r * 0.62, y, r * 0.3, 0, 7); ctx.fill();
+    texOver(ctx, k.texSkin, 0.15);
   }
   ctx.restore();
 }
 
 function foot(ctx, knee, f, k, mat) {
   const skin = k === KINDS.lizzie ? mat : { base: k.skin, light: k.skinLight, dark: k.skinDark, line: k.line };
+  if (isReal()) {
+    ctx.beginPath(); ctx.ellipse(f.x + 5, f.y - 5, 16, 7.5, 0, 0, 7);
+    matFill(ctx, skin.base, k.texSkin, 0.16);
+    shadeOver(ctx, f.x, f.y - 12, f.x, f.y + 2, k.tint || '#ffffff', mat.back, [f.x - 20, f.y - 20, 50, 30]);
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+    if (k.claws) for (let i = 0; i < 3; i++) { const x = f.x + 16 + i * 1.5, y = f.y - 8 + i * 3.5; ctx.fillStyle = '#e9e0c6'; ctx.beginPath(); ctx.moveTo(x, y - 1.5); ctx.lineTo(x + 7, y + 0.5); ctx.lineTo(x, y + 1.8); ctx.fill(); }
+    return;
+  }
   ctx.fillStyle = skin.line; ctx.beginPath(); ctx.ellipse(f.x + 5, f.y - 5, 17.5, 9, 0, 0, 7); ctx.fill();
   ctx.fillStyle = radial(ctx, f.x, f.y - 9, 20, skin.light, skin.base, skin.dark);
   ctx.beginPath(); ctx.ellipse(f.x + 5, f.y - 5, 15, 7, 0, 0, 7); ctx.fill();
+  texOver(ctx, k.texSkin, 0.18);
   for (let i = 0; i < 3; i++) {
     const x = f.x + 14 + i * 1.5, y = f.y - 8 + i * 3.5;
     if (k.claws) { ctx.fillStyle = '#f6f0dc'; ctx.beginPath(); ctx.moveTo(x, y - 1.5); ctx.lineTo(x + 7, y + 0.5); ctx.lineTo(x, y + 1.8); ctx.fill(); }
@@ -592,7 +691,7 @@ function torsoDetail(kind, k) {
       ctx.bezierCurveTo(len * 1.05, 14, len, 30, len * 0.9, 34); ctx.closePath();
       const g = ctx.createLinearGradient(len, 0, len * 0.2, 30);
       g.addColorStop(0, k.skinLight); g.addColorStop(0.5, k.skin); g.addColorStop(1, k.skinDark);
-      ctx.fillStyle = g; ctx.fill();
+      matFill(ctx, g, k.texSkin, 0.25);
       ctx.strokeStyle = 'rgba(70,35,12,0.7)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(len * 0.78, 6); ctx.quadraticCurveTo(len * 0.68, 18, len * 0.72, 30); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(len * 0.95, 8); ctx.quadraticCurveTo(len * 0.8, 16, len * 0.72, 18); ctx.stroke();
@@ -607,7 +706,7 @@ function torsoDetail(kind, k) {
       // segmented belly plates
       ctx.beginPath(); ctx.moveTo(len * 0.05, 26); ctx.bezierCurveTo(len * 0.1, 8, len * 0.6, 6, len * 0.98, 6); ctx.lineTo(len, 30); ctx.closePath();
       const g = ctx.createLinearGradient(0, 4, 0, 26); g.addColorStop(0, k.belly); g.addColorStop(1, k.bellyDark);
-      ctx.fillStyle = g; ctx.fill();
+      matFill(ctx, g, k.texBelly, 0.22);
       ctx.strokeStyle = 'rgba(90,70,10,0.75)'; ctx.lineWidth = 1.6;
       for (let i = 1; i < 8; i++) { const x = len * (i / 8); ctx.beginPath(); ctx.moveTo(x, 8); ctx.quadraticCurveTo(x + 3, 16, x, 28); ctx.stroke(); }
     };
@@ -618,7 +717,7 @@ function torsoDetail(kind, k) {
     for (let i = 0; i <= 10; i++) { const x = lerp(len * 0.1, len * 1.02, i / 10); ctx.lineTo(x, i % 2 ? 4 : 10); }
     ctx.lineTo(len, 30); ctx.closePath();
     const g = ctx.createLinearGradient(len, 0, 0, 30); g.addColorStop(0, k.skinLight); g.addColorStop(1, k.skinDark);
-    ctx.fillStyle = g; ctx.fill();
+    matFill(ctx, g, k.texSkin, 0.25);
     ctx.strokeStyle = 'rgba(70,35,12,0.55)'; ctx.lineWidth = 1.4;
     for (let i = 0; i < 14; i++) { const x = len * (0.15 + hash(i, 77) * 0.85), y = 10 + hash(i, 78) * 18; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 4, y + 4); ctx.stroke(); }
   };
@@ -630,7 +729,7 @@ export function drawMonster(ctx, m, time) {
   const k = KINDS[m.kind];
   const p = computePose(m, time);
   const L = { x: LIGHT.x * m.face, y: LIGHT.y };
-  const back = { ...k, base: shade(k.base, -0.35), light: shade(k.light, -0.4), dark: shade(k.dark, -0.3), skin: shade(k.skin, -0.35), skinLight: shade(k.skinLight, -0.4), skinDark: shade(k.skinDark, -0.3) };
+  const back = { ...k, back: true, base: shade(k.base, -0.35), light: shade(k.light, -0.4), dark: shade(k.dark, -0.3), skin: shade(k.skin, -0.35), skinLight: shade(k.skinLight, -0.4), skinDark: shade(k.skinDark, -0.3) };
   ctx.save();
   ctx.translate(m.x, m.y);
   const sc = m.scale ?? 1;
@@ -657,18 +756,27 @@ export function drawMonster(ctx, m, time) {
   part(ctx, p.hipF, p.kneeF, k.thigh, k, L, { seed: 7 });
   part(ctx, p.kneeF, p.footF, k.shin, k, L, { seed: 8 });
   foot(ctx, p.kneeF, p.footF, k, k);
+  // thick neck joining the photo head to the shoulders
+  if (isReal()) part(ctx, P(p.chest.x - 2, p.chest.y + 6), P(p.head.x - 2, p.head.y + 10), [[0, 17, 17], [1, 15, 15]], k, L, { seed: 12 });
   // shoulder mass + front arm
   ctx.save();
   jaggedBlob(ctx, p.shF.x, p.shF.y, k.upper[1][1] + 1, k.upper[1][1], 22, k.fur, 9);
-  ctx.lineWidth = 4; ctx.strokeStyle = k.line; ctx.stroke();
-  ctx.fillStyle = radial(ctx, p.shF.x - 5, p.shF.y - 6, 24, k.light, k.base, k.dark); ctx.fill();
+  if (isReal()) {
+    matFill(ctx, k.base, k.texBody, 0.3);
+    shadeOver(ctx, p.shF.x - 14, p.shF.y - 14, p.shF.x + 14, p.shF.y + 14, k.tint, false, [p.shF.x - 40, p.shF.y - 40, 80, 80]);
+  } else {
+    ctx.lineWidth = 4; ctx.strokeStyle = k.line; ctx.stroke();
+    ctx.fillStyle = radial(ctx, p.shF.x - 5, p.shF.y - 6, 24, k.light, k.base, k.dark); ctx.fill();
+  }
   ctx.restore();
   part(ctx, p.shF, p.elbF, k.upper, k, L, { seed: 9 });
   part(ctx, p.elbF, p.handF, k.fore, k, L, { seed: 10 });
   // head (big, like the original sprites)
   ctx.save();
   ctx.translate(p.head.x, p.head.y - 6); ctx.rotate(p.headRot); ctx.scale(HEAD_SCALE, HEAD_SCALE);
-  if (m.kind === 'george') headGeorge(ctx, k, p.mouth, time);
+  const photo = isReal() && REAL.heads[m.kind];
+  if (photo) { ctx.scale(1 / HEAD_SCALE, 1 / HEAD_SCALE); drawPhotoHead(ctx, photo, p.mouth, time); }
+  else if (m.kind === 'george') headGeorge(ctx, k, p.mouth, time);
   else if (m.kind === 'lizzie') headLizzie(ctx, k, p.mouth, time);
   else headRalph(ctx, k, p.mouth, time);
   ctx.restore();
