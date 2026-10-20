@@ -28,6 +28,16 @@ python -m http.server 8026
 
 **Static Site**로 배포하는 경우(무료, 더 빠름): Build Command는 비우거나 `echo ok`, Publish Directory는 `.`로 둡니다.
 
+### 링크 미리보기(썸네일)
+
+![thumbnail](assets/og/thumbnail.jpg)
+
+- 링크를 공유하면 `assets/og/thumbnail.jpg`(1200×630)가 미리보기 이미지로 나옵니다(Open Graph, Twitter Card). 카카오톡, 페이스북, X, 슬랙, 디스코드 등에서 쓰입니다.
+- 대부분의 미리보기 크롤러는 이미지 주소가 절대 URL이어야 합니다. **Web Service**로 배포하면 `server.js`가 접속 도메인을 보고 `og:image`, `og:url`을 자동으로 `https://<도메인>/...` 형태로 바꿔 줍니다. 커스텀 도메인을 고정하려면 환경 변수 `PUBLIC_URL`(예: `https://rampage.example.com`)을 설정하세요.
+- **Static Site**로 배포하면 서버가 주소를 바꿔 주지 않습니다. `index.html`의 `og:image`, `og:url`, `twitter:image` 값을 배포 주소가 들어간 절대 URL로 직접 바꿔 주세요.
+- 썸네일은 게임 렌더러로 다시 만들 수 있습니다: 서버를 띄운 뒤 `python tools/make_thumbnail.py`.
+- 카카오톡은 미리보기를 캐시합니다. 이미지를 바꾼 뒤에는 [카카오 공유 디버거](https://developers.kakao.com/tool/debugger/sharing)에서 캐시를 초기화하세요.
+
 ## 저장 · 이어하기
 
 - 매 스테이지(날)가 시작될 때 진행 상황(날짜, 참가 플레이어, 점수)이 브라우저 localStorage에 자동 저장됩니다.
